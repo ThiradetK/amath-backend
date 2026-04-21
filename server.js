@@ -80,7 +80,8 @@ function buildStateFor(room, playerId) {
     tileBagCount: room.tileBag.length,
     winner: room.winner,
     winners: room.winners, // NEW: expose tie info
-    gameEndReason: room.gameEndReason, // NEW: expose reason
+    gameEndReason: room.gameEndReason,
+    hostPlayerId: room.hostPlayerId, // ✅ ส่งมาทุก state update
     moveHistory: room.moveHistory,
     players: room.players.map((p) => ({
       id: p.id,
