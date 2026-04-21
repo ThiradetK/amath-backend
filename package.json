@@ -1,0 +1,14 @@
+{
+  "name": "amath-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.0"
+  }
+}
