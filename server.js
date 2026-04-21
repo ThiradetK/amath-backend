@@ -40,6 +40,7 @@ function createRoom(id, maxPlayers) {
     moveHistory: [],
     createdAt: Date.now(),
     turnTimer: null, // NEW: server-side turn timer handle
+    hostPlayerId: null, // NEW: track host by id, not array index
   };
 }
 
@@ -318,6 +319,7 @@ const handlers = {
     const room = createRoom(roomId, Math.min(Math.max(maxPlayers, 2), 4));
     const player = { id: playerId, name, score: 0, rack: [], connected: true };
     room.players.push(player);
+    room.hostPlayerId = playerId; // ✅ track host by id
     rooms.set(roomId, room);
     clients.set(ws, { playerId, roomId, name });
 
@@ -359,7 +361,7 @@ const handlers = {
     send(ws, "ROOM_JOINED", {
       roomId,
       playerId,
-      isHost: false,
+      isHost: room.hostPlayerId === playerId, // ✅ check by id, not hardcoded false
       state: buildStateFor(room, playerId),
     });
     broadcastRoom(
@@ -380,7 +382,7 @@ const handlers = {
     if (!meta) return;
     const room = rooms.get(meta.roomId);
     if (!room) return;
-    if (room.players[0].id !== meta.playerId)
+    if (room.hostPlayerId !== meta.playerId)
       return send(ws, "ERROR", { message: "เฉพาะ host เท่านั้น" });
     if (room.players.filter((p) => p.connected).length < 2)
       return send(ws, "ERROR", { message: "ต้องมีผู้เล่นอย่างน้อย 2 คน" });
