@@ -413,28 +413,58 @@ const handlers = {
       return send(ws, "ERROR", { message: "ยังไม่ได้วางเบี้ย" });
 
     // Validate tiles belong to player
+    // ✅ ตรวจทั้ง id และ originalId เพราะ client อาจส่งมาแบบใดแบบหนึ่ง
     const rackIds = new Set(currentPlayer.rack.map((t) => t.id));
-    if (!placed.every((p) => rackIds.has(p.tile.id)))
+    const rackOriginalIds = new Set(
+      currentPlayer.rack.map((t) => t.originalId || t.id),
+    );
+    if (
+      !placed.every(
+        (p) =>
+          rackIds.has(p.tile.id) ||
+          rackOriginalIds.has(p.tile.id) ||
+          rackOriginalIds.has(p.tile.originalId),
+      )
+    )
       return send(ws, "ERROR", { message: "เบี้ยไม่ถูกต้อง" });
+
+    // Normalize placed tile IDs ให้ตรงกับ rack ก่อน process
+    const resolvedPlaced = placed.map((p) => {
+      const rackTile =
+        currentPlayer.rack.find((t) => t.id === p.tile.id) ||
+        currentPlayer.rack.find((t) => t.originalId === p.tile.id) ||
+        currentPlayer.rack.find((t) => t.id === p.tile.originalId) ||
+        currentPlayer.rack.find((t) => t.originalId === p.tile.originalId);
+      return rackTile
+        ? {
+            ...p,
+            tile: {
+              ...rackTile,
+              blankValue: p.tile.blankValue,
+              isBlank: p.tile.isBlank,
+            },
+          }
+        : p;
+    });
 
     const isFirst = isBoardEmpty(room.board);
     const { valid, error, equations } = validatePlacement(
       room.board,
-      placed,
+      resolvedPlaced,
       isFirst,
     );
     if (!valid) return send(ws, "ERROR", { message: error });
 
-    const score = calculateScore(room.board, placed, equations);
-    const bingo = placed.length === 8;
+    const score = calculateScore(room.board, resolvedPlaced, equations);
+    const bingo = resolvedPlaced.length === 8;
 
     // Apply tiles to board
-    for (const p of placed) {
+    for (const p of resolvedPlaced) {
       room.board[p.row][p.col] = { ...room.board[p.row][p.col], tile: p.tile };
     }
 
     // Remove placed tiles from rack
-    const placedIds = new Set(placed.map((p) => p.tile.id));
+    const placedIds = new Set(resolvedPlaced.map((p) => p.tile.id));
     currentPlayer.rack = currentPlayer.rack.filter((t) => !placedIds.has(t.id));
     currentPlayer.score += score;
 
