@@ -156,7 +156,6 @@ export function validateEquation(tiles) {
 
   // Tokenize ก่อน เพื่อให้รวม multi-digit ได้ถูกต้อง
   const tokens = tilesToTokens(tiles);
-  console.log("[SERVER] tokens:", tokens);
 
   // หา = ใน tokens
   const equalPositions = [];
