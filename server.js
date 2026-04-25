@@ -125,7 +125,6 @@ function startTurnTimer(room) {
   room.turnTimer = setTimeout(() => {
     if (room.gamePhase !== "playing") return;
     const player = room.players[room.currentPlayerIndex];
-    console.log(`[${room.id}] Turn timeout — auto-passing for ${player.name}`);
     applyPass(room, player, "timeout");
     broadcastRoomState(room.id);
   }, TURN_TIMEOUT_MS);
@@ -238,11 +237,6 @@ function endGame(room, reason = "EMPTY_HAND") {
 
   room.gameEndReason = reason;
   room.gamePhase = "ended";
-
-  console.log(
-    `[${room.id}] Game ended (${reason}). Winner: ${winner.name} (${winner.score}pts)` +
-      (topPlayers.length > 1 ? ` — TIE with ${topPlayers.length} players` : ""),
-  );
 }
 
 // ─── Core: apply a pass action ────────────────────────────
@@ -331,7 +325,6 @@ const handlers = {
       state: buildStateFor(room, playerId),
     });
     broadcastLobby();
-    console.log(`[${roomId}] Created by ${name}`);
   },
 
   JOIN_ROOM(ws, { roomId, name }) {
@@ -373,9 +366,6 @@ const handlers = {
     );
     broadcastRoomState(roomId);
     broadcastLobby();
-    console.log(
-      `[${roomId}] ${name} joined (${room.players.length}/${room.maxPlayers})`,
-    );
   },
 
   START_GAME(ws) {
@@ -391,9 +381,6 @@ const handlers = {
     startGame(room);
     broadcastRoomState(meta.roomId);
     broadcastLobby();
-    console.log(
-      `[${meta.roomId}] Game started with ${room.players.length} players`,
-    );
   },
 
   // ── Gameplay ──────────────────────────────────────────
@@ -490,10 +477,6 @@ const handlers = {
     // Reset consecutive passes — a successful move breaks any pass streak
     room.consecutivePasses = 0;
 
-    console.log(
-      `[${room.id}] ${currentPlayer.name} scored ${score}${bingo ? " 🎉 BINGO" : ""}`,
-    );
-
     // ── Check game end (Case A) ───────────────────────────
     if (evaluateGameEnd(room, currentPlayer)) {
       broadcastRoomState(meta.roomId);
@@ -518,12 +501,6 @@ const handlers = {
 
     const ended = applyPass(room, currentPlayer, "manual");
     broadcastRoomState(meta.roomId);
-
-    if (!ended) {
-      console.log(
-        `[${room.id}] ${currentPlayer.name} passed (${room.consecutivePasses} consecutive)`,
-      );
-    }
   },
 
   EXCHANGE_TILES(ws, { tileIds }) {
@@ -563,10 +540,6 @@ const handlers = {
     // ✅ FIX: Exchange counts as a pass for the consecutive-pass counter
     // (was incorrectly reset to 0 in original code)
     room.consecutivePasses++;
-
-    console.log(
-      `[${room.id}] ${currentPlayer.name} exchanged ${toExchange.length} tiles`,
-    );
 
     // Check if exchange tips ALL_PASS threshold (rare but possible)
     const connectedCount = room.players.filter((p) => p.connected).length;
@@ -615,7 +588,6 @@ function handleDisconnect(ws) {
   if (!anyConnected) {
     clearTurnTimer(room);
     rooms.delete(roomId);
-    console.log(`[${roomId}] Room deleted (empty)`);
     broadcastLobby();
     return;
   }
@@ -625,15 +597,11 @@ function handleDisconnect(ws) {
     room.gamePhase === "playing" &&
     room.players[room.currentPlayerIndex]?.id === playerId
   ) {
-    console.log(
-      `[${roomId}] Current player ${name} disconnected — auto-passing`,
-    );
     applyPass(room, player, "disconnect");
     broadcastRoomState(roomId);
   }
 
   broadcastLobby();
-  console.log(`[${roomId}] ${name} disconnected`);
 }
 
 // ─── Server setup ─────────────────────────────────────────
@@ -657,7 +625,6 @@ const httpServer = createServer((req, res) => {
 const wss = new WebSocketServer({ server: httpServer });
 
 wss.on("connection", (ws) => {
-  console.log("Client connected");
   clients.set(ws, { playerId: null, roomId: null, name: null });
 
   ws.on("message", (raw) => {
@@ -675,6 +642,4 @@ wss.on("connection", (ws) => {
   ws.on("error", (e) => console.error("WS error:", e.message));
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`🎮 A-Math Server running on ws://localhost:${PORT}`);
-});
+httpServer.listen(PORT, () => {});
